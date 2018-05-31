@@ -59,10 +59,12 @@ void main()
     vec4 n = normalize(normal);
 
     // Vetor que define o sentido da fonte de luz em relação ao ponto atual.
-    vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
+    //vec4 l = normalize(vec4(1.0,1.0,0.0,0.0));
 
     // Vetor que define o sentido da câmera em relação ao ponto atual.
     vec4 v = normalize(camera_position - p);
+
+    vec4 l = v;
 
     // Coordenadas de textura U e V
     float U = 0.0;
@@ -97,17 +99,8 @@ void main()
     }
     else if ( object_id == BULLET )
     {
-        vec4 bbox_center = (bbox_min + bbox_max) / 2.0;
-
-        vec4 p_sphere = bbox_center + normalize(position_model - bbox_center);
-        vec4 p_vector = p_sphere - bbox_center;
-
-        float rho = length(p_vector);
-        float theta = atan(p_vector.x, p_vector.z);
-        float fi = asin(p_vector.y/rho);
-
-        U = (theta + M_PI)/(2*M_PI);
-        V = (fi + M_PI_2)/M_PI;
+        U = texcoords.x;
+        V = texcoords.y;
     }
     else if ( object_id == PLANE )
     {
