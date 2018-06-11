@@ -22,6 +22,8 @@ uniform mat4 projection;
 #define GUN 0
 #define BULLET  1
 #define PLANE  2
+#define BALLOON 3
+
 uniform int object_id;
 
 // Parâmetros da axis-aligned bounding box (AABB) do modelo
@@ -103,6 +105,12 @@ void main()
         V = texcoords.y;
     }
     else if ( object_id == PLANE )
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        U = texcoords.x;
+        V = texcoords.y;
+    }
+    else if ( object_id == BALLOON )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
         U = texcoords.x;

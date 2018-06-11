@@ -131,6 +131,9 @@ struct SceneObject
     glm::vec3    bbox_max;
 };
 
+// funções para checar colisões
+bool checkCollisionBBox(SceneObject objectA, SceneObject objectB);
+
 // Definimos uma estrutura que armazena dados necessarios para a movimetacao das balas
 struct Bullet
 {
@@ -138,6 +141,13 @@ struct Bullet
     glm::vec3  velocity;
     int        tempo = 0;
 };
+
+/*struct Balloon
+{
+    glm::mat4  position;
+    glm::vec3  velocity;
+    //int        tempo = 0;
+};*/
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 
@@ -275,6 +285,10 @@ int main(int argc, char* argv[])
     ComputeNormals(&planemodel);
     BuildTrianglesAndAddToVirtualScene(&planemodel);
 
+    ObjModel balloonmodel("../../data/Balloon/balloon.obj");
+    ComputeNormals(&balloonmodel);
+    BuildTrianglesAndAddToVirtualScene(&balloonmodel);
+
     if ( argc > 1 )
     {
         ObjModel model(argv[1]);
@@ -300,6 +314,9 @@ int main(int argc, char* argv[])
 
     std::vector<Bullet> bullets; // Vetor que armazena as balas sendo utilizadas na cena no momento
     int time_bullet = 0; // variavel que calcula o tempo entre cada bala
+
+    //std::vector<Balloon> balloons; // Vetor que armazena as balas sendo utilizadas na cena no momento
+    //bool teste = true;
 
     // Ficamos em loop, renderizando, até que o usuário feche a janela
     while (!glfwWindowShouldClose(window))
@@ -356,7 +373,7 @@ int main(int argc, char* argv[])
         #define GUN 0
         #define BULLET  1
         #define PLANE  2
-
+        #define BALLOON 3
 
         // Desenhamos o modelo da arma
         model =  glm::inverse(view)
@@ -406,12 +423,26 @@ int main(int argc, char* argv[])
                 bullets.erase(bullets.begin() + i);
         }
 
+        //for(unsigned int i=0; i<balloons.size(); i++){
+        //if(teste){
+            model = Matrix_Translate(1.0f,-0.5f,0.0f)
+                  * Matrix_Scale(0.25f, 0.25f, 0.25f);
+            glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+            glUniform1i(object_id_uniform, BALLOON);
+            DrawVirtualObject("balloon");
+        //}
+
         // Desenhamos o plano do chão
         model = Matrix_Translate(0.0f,-1.1f,0.0f)
               * Matrix_Scale(10.0, 1.0, 10.0);
         glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
+
+        //if(checkCollisionBBox(g_VirtualScene["Linie01"], g_VirtualScene["balloon"]))
+        //    teste = false;
+
+
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -439,6 +470,24 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+bool checkCollisionBBox(SceneObject objectA, SceneObject objectB)
+{
+    //check the X axis
+   if((objectB.bbox_min.x > objectA.bbox_min.x) && (objectB.bbox_min.x < objectA.bbox_max.x))
+   {
+      //check the Y axis
+      if((objectB.bbox_min.y > objectA.bbox_min.y) && (objectB.bbox_min.y < objectA.bbox_max.y))
+      {
+          //check the Z axis
+          if((objectB.bbox_min.z > objectA.bbox_min.z) && (objectB.bbox_min.z < objectA.bbox_max.z))
+          {
+             return true;
+          }
+      }
+   }
+
+   return false;
+}
 
 // Função que carrega uma imagem para ser utilizada como textura
 void LoadTextureImage(const char* filename)
