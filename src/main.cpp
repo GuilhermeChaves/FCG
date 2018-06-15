@@ -118,6 +118,11 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 void CursorPosCallback(GLFWwindow* window, double xpos, double ypos);
 
+void moveCharacter_W();
+void moveCharacter_A();
+void moveCharacter_S();
+void moveCharacter_D();
+
 // Definimos uma estrutura que armazenará dados necessários para renderizar
 // cada objeto da cena virtual.
 struct SceneObject
@@ -167,6 +172,11 @@ float g_ScreenRatio = 1.0f;
 // pressionado no momento atual. Veja função MouseButtonCallback().
 bool g_LeftMouseButtonPressed = false;
 bool g_RightMouseButtonPressed = false; // Análogo para botão direito do mouse
+
+bool is_W_pressed = false; //TRUE se o usuario pressionar a tecla W
+bool is_A_pressed = false; //TRUE se o usuario pressionar a tecla A
+bool is_S_pressed = false; //TRUE se o usuario pressionar a tecla S
+bool is_D_pressed = false; //TRUE se o usuario pressionar a tecla D
 
 // Variáveis que definem a câmera em coordenadas esféricas, controladas pelo
 // usuário através do mouse (veja função CursorPosCallback()). A posição
@@ -331,7 +341,7 @@ int main(int argc, char* argv[])
         // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
         //
         //           R     G     B     A
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
         // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
         // e também resetamos todos os pixels do Z-buffer (depth buffer).
@@ -340,6 +350,15 @@ int main(int argc, char* argv[])
         // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
         // os shaders de vértice e fragmentos).
         glUseProgram(program_id);
+
+        if(is_W_pressed)
+            moveCharacter_W();
+        else if(is_A_pressed)
+            moveCharacter_A();
+        else if(is_S_pressed)
+            moveCharacter_S();
+        else if(is_D_pressed)
+            moveCharacter_D();
 
         // Computamos a matriz "View" utilizando os parâmetros da câmera para
         // definir o sistema de coordenadas da câmera.  Veja slide 179 do
@@ -370,10 +389,11 @@ int main(int argc, char* argv[])
         glUniformMatrix4fv(view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
         glUniformMatrix4fv(projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
 
-        #define GUN 0
+        #define GUN     0
         #define BULLET  1
-        #define PLANE  2
+        #define PLANE   2
         #define BALLOON 3
+        #define WALLS   4
 
         // Desenhamos o modelo da arma
         model =  glm::inverse(view)
@@ -425,8 +445,8 @@ int main(int argc, char* argv[])
 
         //for(unsigned int i=0; i<balloons.size(); i++){
         //if(teste){
-            model = Matrix_Translate(1.0f,-0.5f,0.0f)
-                  * Matrix_Scale(0.25f, 0.25f, 0.25f);
+        model = Matrix_Translate(1.0f,-0.5f,0.0f)
+              * Matrix_Scale(0.25f, 0.25f, 0.25f);
             glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
             glUniform1i(object_id_uniform, BALLOON);
             DrawVirtualObject("balloon");
@@ -439,10 +459,35 @@ int main(int argc, char* argv[])
         glUniform1i(object_id_uniform, PLANE);
         DrawVirtualObject("plane");
 
-        //if(checkCollisionBBox(g_VirtualScene["Linie01"], g_VirtualScene["balloon"]))
-        //    teste = false;
+        model = Matrix_Translate(10.0f,8.9f,0.0f)
+              * Matrix_Scale(10.0, 10.0, 10.0)
+              * Matrix_Rotate_Z(90*M_PI/180);
+        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(object_id_uniform, WALLS);
+        DrawVirtualObject("plane");
 
+        model = Matrix_Translate(-10.0f,8.9f,0.0f)
+              * Matrix_Scale(10.0, 10.0, 10.0)
+              * Matrix_Rotate_Z(-90*M_PI/180);
+        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(object_id_uniform, WALLS);
+        DrawVirtualObject("plane");
 
+        model = Matrix_Translate(0.0f,8.9f,10.0f)
+              * Matrix_Scale(10.0, 10.0, 10.0)
+              * Matrix_Rotate_Y(90*M_PI/180)
+              * Matrix_Rotate_Z(-90*M_PI/180);
+        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(object_id_uniform, WALLS);
+        DrawVirtualObject("plane");
+
+        model = Matrix_Translate(0.0f,8.9f,-10.0f)
+              * Matrix_Scale(10.0, 10.0, 10.0)
+              * Matrix_Rotate_Y(-90*M_PI/180)
+              * Matrix_Rotate_Z(-90*M_PI/180);
+        glUniformMatrix4fv(model_uniform, 1 , GL_FALSE , glm::value_ptr(model));
+        glUniform1i(object_id_uniform, WALLS);
+        DrawVirtualObject("plane");
 
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
@@ -470,23 +515,45 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-bool checkCollisionBBox(SceneObject objectA, SceneObject objectB)
+void moveCharacter_W()
 {
-    //check the X axis
-   if((objectB.bbox_min.x > objectA.bbox_min.x) && (objectB.bbox_min.x < objectA.bbox_max.x))
-   {
-      //check the Y axis
-      if((objectB.bbox_min.y > objectA.bbox_min.y) && (objectB.bbox_min.y < objectA.bbox_max.y))
-      {
-          //check the Z axis
-          if((objectB.bbox_min.z > objectA.bbox_min.z) && (objectB.bbox_min.z < objectA.bbox_max.z))
-          {
-             return true;
-          }
-      }
-   }
+        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
+        prodVetor = crossproduct(-prodVetor, camera_up_vector);
+        /*tnow = (float)glfwGetTime();
+        t = tnow - tprev;
+        tprev = tnow;*/
 
-   return false;
+        camera_position_c.x += /*(t+0.5) **/ prodVetor.x*0.09f;
+        camera_position_c.y += /*(t+0.5) **/ prodVetor.y*0.09f;
+        camera_position_c.z += /*(t+0.5) **/ prodVetor.z*0.09f;
+}
+
+void moveCharacter_S()
+{
+        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
+        prodVetor = crossproduct(-prodVetor, camera_up_vector);
+
+        camera_position_c.x -= prodVetor.x*0.09f;
+        camera_position_c.y -= prodVetor.y*0.09f;
+        camera_position_c.z -= prodVetor.z*0.09f;
+}
+
+void moveCharacter_A()
+{
+        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
+
+        camera_position_c.x -= prodVetor.x*0.09f;
+        camera_position_c.y -= prodVetor.y*0.09f;
+        camera_position_c.z -= prodVetor.z*0.09f;
+}
+
+void moveCharacter_D()
+{
+        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
+
+        camera_position_c.x += prodVetor.x*0.09f;
+        camera_position_c.y += prodVetor.y*0.09f;
+        camera_position_c.z += prodVetor.z*0.09f;
 }
 
 // Função que carrega uma imagem para ser utilizada como textura
@@ -1107,6 +1174,7 @@ void CursorPosCallback(GLFWwindow* window, double xpos, double ypos)
 
 }
 
+//bool pressed = false;
 // Definição da função que será chamada sempre que o usuário pressionar alguma
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
@@ -1115,62 +1183,25 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
 
-    float tprev = (float)glfwGetTime();
-    float tnow, t;
+    /*float tprev = (float)glfwGetTime();
+    float tnow, t;*/
 
-    if (key == GLFW_KEY_W)
-    {
-        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
-        prodVetor = crossproduct(-prodVetor, camera_up_vector);
-
-        /*camera_position_c.x += camera_view_vector.x*0.02f;
-        camera_position_c.y += camera_view_vector.y*0.02f;
-        camera_position_c.z += camera_view_vector.z*0.02f;*/
-        tnow = (float)glfwGetTime();
-        t = tnow - tprev;
-        tprev = tnow;
-
-        camera_position_c.x += (t+0.5) * prodVetor.x*0.09f;
-        camera_position_c.y += (t+0.5) * prodVetor.y*0.09f;
-        camera_position_c.z += (t+0.5) * prodVetor.z*0.09;
-        /*camera_position_c.x += prodVetor.x*0.02f;
-        camera_position_c.y += prodVetor.y*0.02f;
-        camera_position_c.z += prodVetor.z*0.02f;*/
-    }
-    else if(key == GLFW_KEY_S)
-    {
-        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
-        prodVetor = crossproduct(-prodVetor, camera_up_vector);
-
-        /*camera_position_c.x -= camera_view_vector.x*0.02f;
-        camera_position_c.y -= camera_view_vector.y*0.02f;
-        camera_position_c.z -= camera_view_vector.z*0.02f;*/
-        camera_position_c.x -= prodVetor.x*0.02f;
-        camera_position_c.y -= prodVetor.y*0.02f;
-        camera_position_c.z -= prodVetor.z*0.02f;
-    }
-    else if(key == GLFW_KEY_A)
-    {
-        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
-
-        camera_position_c.x -= prodVetor.x*0.02f;
-        camera_position_c.y -= prodVetor.y*0.02f;
-        camera_position_c.z -= prodVetor.z*0.02f;
-    }
-    else if(key == GLFW_KEY_D)
-    {
-        glm::vec4 prodVetor = crossproduct(camera_view_vector, camera_up_vector);
-
-        camera_position_c.x += prodVetor.x*0.02f;
-        camera_position_c.y += prodVetor.y*0.02f;
-        camera_position_c.z += prodVetor.z*0.02f;
-    }
-
-    // Se o usuário apertar a tecla espaço, resetamos os ângulos de Euler para zero.
-    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-    {
-
-    }
+    if(key == GLFW_KEY_W && action == GLFW_PRESS)
+        is_W_pressed = true;
+    else if(key == GLFW_KEY_W && action == GLFW_RELEASE)
+        is_W_pressed = false;
+    else if(key == GLFW_KEY_A && action == GLFW_PRESS)
+        is_A_pressed = true;
+    else if(key == GLFW_KEY_A && action == GLFW_RELEASE)
+        is_A_pressed = false;
+    else if(key == GLFW_KEY_S && action == GLFW_PRESS)
+        is_S_pressed = true;
+    else if(key == GLFW_KEY_S && action == GLFW_RELEASE)
+        is_S_pressed = false;
+    else if(key == GLFW_KEY_D && action == GLFW_PRESS)
+        is_D_pressed = true;
+    else if(key == GLFW_KEY_D && action == GLFW_RELEASE)
+        is_D_pressed = false;
 
     // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
     if (key == GLFW_KEY_H && action == GLFW_PRESS)

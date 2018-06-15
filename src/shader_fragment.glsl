@@ -13,6 +13,8 @@ in vec4 position_model;
 // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
 in vec2 texcoords;
 
+in vec3 cor_v;
+
 // Matrizes computadas no código C++ e enviadas para a GPU
 uniform mat4 model;
 uniform mat4 view;
@@ -23,6 +25,7 @@ uniform mat4 projection;
 #define BULLET  1
 #define PLANE  2
 #define BALLOON 3
+#define WALLS 4
 
 uniform int object_id;
 
@@ -72,6 +75,12 @@ void main()
     float U = 0.0;
     float V = 0.0;
 
+    // Parâmetros que definem as propriedades espectrais da superfície
+    vec3 Kd; // Refletância difusa
+    vec3 Ks; // Refletância especular
+    vec3 Ka; // Refletância ambiente
+    float q; // Expoente especular para o modelo de iluminação de Phong
+
     if ( object_id == GUN )
     {
         // PREENCHA AQUI as coordenadas de textura da esfera, computadas com
@@ -113,9 +122,35 @@ void main()
     else if ( object_id == BALLOON )
     {
         // Coordenadas de textura do plano, obtidas do arquivo OBJ.
-        U = texcoords.x;
-        V = texcoords.y;
+        Kd = vec3(0.08,0.4,0.8);
+        Ks = vec3(0.8,0.8,0.8);
+        Ka = vec3(0.04,0.2,0.4);
+        q = 32.0;
     }
+    /*else if ( object_id == WALLS )
+    {
+        // Coordenadas de textura do plano, obtidas do arquivo OBJ.
+        Kd = vec3(0.1,0.1,0.1);
+        Ks = vec3(0.0,0.0,0.0);
+        Ka = vec3(0.02,0.02,0.02);
+    }*/
+
+    // Espectro da fonte de iluminação
+    vec3 I = vec3(1.0,1.0,1.0);
+
+    // Espectro da luz ambiente
+    vec3 Ia = vec3(0.2,0.2,0.2);
+
+    // Termo difuso utilizando a lei dos cossenos de Lambert
+    vec3 lambert_diffuse_term = Kd*I*max(0, dot(n, l));
+
+    // Termo ambiente
+    vec3 ambient_term = Ka*Ia;
+
+    vec4 h = normalize(v+l);
+
+    // Termo especular utilizando o modelo de iluminação de Blinn-Phong
+    vec3 phong_specular_term  = Ks*I*pow((max(0, dot(n, h))), q);
 
     // Obtemos a refletância difusa a partir da leitura da imagem TextureImage0
     vec3 Kd0 = texture(TextureImage0, vec2(U,V)).rgb;
@@ -129,6 +164,10 @@ void main()
         color = Kd0 * (lambert + 0.01);
     else if(object_id == PLANE)
         color = Kd1 * (lambert + 0.01);
+    else if(object_id == BALLOON)
+        color = lambert_diffuse_term + ambient_term + phong_specular_term;
+    else if(object_id == WALLS)
+        color = cor_v;
     else
         color = Kd2 * (lambert + 0.01);
 

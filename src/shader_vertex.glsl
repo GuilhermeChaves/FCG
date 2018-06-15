@@ -1,5 +1,13 @@
 #version 330 core
 
+#define GUN 0
+#define BULLET  1
+#define PLANE  2
+#define BALLOON 3
+#define WALLS   4
+
+uniform int object_id;
+
 // Atributos de vértice recebidos como entrada ("in") pelo Vertex Shader.
 // Veja a função BuildTrianglesAndAddToVirtualScene() em "main.cpp".
 layout (location = 0) in vec4 model_coefficients;
@@ -19,6 +27,7 @@ out vec4 position_world;
 out vec4 position_model;
 out vec4 normal;
 out vec2 texcoords;
+out vec3 cor_v;
 
 void main()
 {
@@ -60,4 +69,37 @@ void main()
 
     // Coordenadas de textura obtidas do arquivo OBJ (se existirem!)
     texcoords = texture_coefficients;
+
+    if(object_id == WALLS)
+    {
+        vec3 Kd = vec3(0.1,0.1,0.1);
+        vec3 Ka = vec3(0.02,0.02,0.02);
+
+        vec4 origin = vec4(0.0, 0.0, 0.0, 1.0);
+        vec4 camera_position = inverse(view) * origin;
+
+        vec4 p = position_world;
+
+        vec4 n = normalize(normal);
+
+        // Vetor que define o sentido da câmera em relação ao ponto atual.
+        vec4 v = normalize(camera_position - p);
+
+        vec4 l = v;
+
+        // Espectro da fonte de iluminação
+        vec3 I = vec3(1.0,1.0,1.0);
+
+        // Espectro da luz ambiente
+        vec3 Ia = vec3(0.2,0.2,0.2);
+
+        // Termo difuso utilizando a lei dos cossenos de Lambert
+        vec3 lambert_diffuse_term = Kd*I*max(0, dot(n, l));
+
+        // Termo ambiente
+        vec3 ambient_term = Ka*Ia;
+
+        cor_v = lambert_diffuse_term + ambient_term;
+    }
+
 }
